@@ -16,6 +16,8 @@ export default defineConfig({
   adapter: vercel({
     // Vercel adapter options
     analytics: true,
+    // Explicitly set Node.js version to 18 for Vercel
+    nodeVersion: '18',
   }),
   // Configure server options
   server: {
