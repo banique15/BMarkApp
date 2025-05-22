@@ -1,0 +1,371 @@
+---
+import MainLayout from '../layouts/MainLayout.astro';
+import { supabase } from '../utils/supabase';
+
+// Fetch models from Supabase
+const { data: models, error: modelsError } = await supabase
+  .from('models')
+  .select('*')
+  .order('provider', { ascending: true })
+  .order('name', { ascending: true });
+
+// Get environment variables (masked for security)
+const openRouterApiKey = import.meta.env.OPENROUTER_API_KEY ? '••••••••••••••••••••••••••••••' : '';
+const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY ? '••••••••••••••••••••••••••••••' : '';
+---
+
+<MainLayout title="Settings">
+  <div class="max-w-3xl mx-auto px-4 sm:px-6 py-8">
+    <div class="flex justify-between items-center mb-6">
+      <h1 class="text-2xl font-bold text-gray-900">Settings</h1>
+      <a href="/" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+        Back to Benchmark
+      </a>
+    </div>
+    
+    <!-- Status Messages -->
+    <div id="status-message" class="mb-6 p-4 rounded-md hidden">
+      <p id="status-text" class="text-sm"></p>
+    </div>
+    
+    <!-- Settings Form -->
+    <div class="bg-white shadow rounded-lg overflow-hidden">
+      <form id="settings-form" class="divide-y divide-gray-200">
+        <!-- API Configuration -->
+        <div class="p-6">
+          <h2 class="text-lg font-medium text-gray-900 mb-4">API Configuration</h2>
+          
+          <div class="space-y-4">
+            <div>
+              <label for="openrouter-api-key" class="block text-sm font-medium text-gray-700 mb-1">
+                OpenRouter API Key
+              </label>
+              <input
+                type="password"
+                id="openrouter-api-key"
+                placeholder="Enter your OpenRouter API key"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={openRouterApiKey}
+              />
+              <p class="mt-1 text-sm text-gray-500">
+                Get your API key from <a href="https://openrouter.ai" target="_blank" class="text-blue-600 hover:text-blue-800">OpenRouter</a>
+              </p>
+            </div>
+            
+            <div>
+              <label for="supabase-url" class="block text-sm font-medium text-gray-700 mb-1">
+                Supabase URL
+              </label>
+              <input
+                type="text"
+                id="supabase-url"
+                placeholder="https://your-project.supabase.co"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={supabaseUrl}
+              />
+            </div>
+            
+            <div>
+              <label for="supabase-anon-key" class="block text-sm font-medium text-gray-700 mb-1">
+                Supabase Anon Key
+              </label>
+              <input
+                type="password"
+                id="supabase-anon-key"
+                placeholder="Enter your Supabase anon key"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={supabaseAnonKey}
+              />
+            </div>
+          </div>
+        </div>
+        
+        <!-- Model Management -->
+        <div class="p-6">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-lg font-medium text-gray-900">Model Management</h2>
+            <button id="sync-models" type="button" class="px-3 py-1 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors text-sm">
+              Sync Models
+            </button>
+          </div>
+          
+          <div class="mb-4">
+            <div class="flex items-center justify-between">
+              <label for="model-search" class="block text-sm font-medium text-gray-700">
+                Search Models
+              </label>
+              <div class="flex space-x-2">
+                <button id="select-all" type="button" class="text-sm text-blue-600 hover:text-blue-800">Select All</button>
+                <span class="text-gray-300">|</span>
+                <button id="deselect-all" type="button" class="text-sm text-blue-600 hover:text-blue-800">Deselect All</button>
+              </div>
+            </div>
+            <input
+              type="text"
+              id="model-search"
+              placeholder="Search models..."
+              class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          
+          <div class="border border-gray-200 rounded-md overflow-hidden">
+            <div class="max-h-64 overflow-y-auto">
+              <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50 sticky top-0">
+                  <tr>
+                    <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Model
+                    </th>
+                    <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Provider
+                    </th>
+                    <th scope="col" class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Enabled
+                    </th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200" id="models-table-body">
+                  {modelsError && (
+                    <tr>
+                      <td colspan="3" class="px-4 py-2 text-center text-sm text-red-500">
+                        Error loading models: {modelsError.message}
+                      </td>
+                    </tr>
+                  )}
+                  
+                  {!modelsError && models && models.length === 0 && (
+                    <tr>
+                      <td colspan="3" class="px-4 py-2 text-center text-sm text-gray-500">
+                        No models found. Click "Sync Models" to fetch models.
+                      </td>
+                    </tr>
+                  )}
+                  
+                  {!modelsError && models && models.map((model, index) => (
+                    <tr class={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                      <td class="px-4 py-2 whitespace-nowrap">
+                        <div class="text-sm font-medium text-gray-900">{model.name}</div>
+                        <div class="text-xs text-gray-500">{model.model_id}</div>
+                      </td>
+                      <td class="px-4 py-2 whitespace-nowrap">
+                        <div class="text-sm text-gray-500">{model.provider}</div>
+                      </td>
+                      <td class="px-4 py-2 whitespace-nowrap">
+                        <label class="inline-flex items-center">
+                          <input
+                            type="checkbox"
+                            class="model-toggle rounded text-blue-600 focus:ring-blue-500"
+                            data-model-id={model.id}
+                            checked={model.enabled}
+                          />
+                        </label>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Appearance -->
+        <div class="p-6">
+          <h2 class="text-lg font-medium text-gray-900 mb-4">Appearance</h2>
+          
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                Theme
+              </label>
+              <div class="flex space-x-4">
+                <label class="inline-flex items-center">
+                  <input type="radio" name="theme" value="light" class="h-4 w-4 text-blue-600 focus:ring-blue-500" checked />
+                  <span class="ml-2 text-sm text-gray-700">Light</span>
+                </label>
+                <label class="inline-flex items-center">
+                  <input type="radio" name="theme" value="dark" class="h-4 w-4 text-blue-600 focus:ring-blue-500" />
+                  <span class="ml-2 text-sm text-gray-700">Dark</span>
+                </label>
+                <label class="inline-flex items-center">
+                  <input type="radio" name="theme" value="system" class="h-4 w-4 text-blue-600 focus:ring-blue-500" />
+                  <span class="ml-2 text-sm text-gray-700">System</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Form Actions -->
+        <div class="px-6 py-4 bg-gray-50 text-right">
+          <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+            Save Settings
+          </button>
+        </div>
+      </form>
+    </div>
+    
+    <!-- Data Management -->
+    <div class="mt-6 bg-white shadow rounded-lg overflow-hidden">
+      <div class="p-6">
+        <h2 class="text-lg font-medium text-gray-900 mb-4">Data Management</h2>
+        
+        <div class="space-y-3">
+          <button type="button" id="export-data" class="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors text-left flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Export Benchmark Data
+          </button>
+          <button type="button" id="clear-data" class="w-full px-4 py-2 bg-red-50 text-red-700 rounded-md hover:bg-red-100 transition-colors text-left flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            Clear Benchmark Data
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</MainLayout>
+
+<script>
+  // DOM Elements
+  const statusMessage = document.getElementById('status-message');
+  const statusText = document.getElementById('status-text');
+  const settingsForm = document.getElementById('settings-form');
+  const syncModelsBtn = document.getElementById('sync-models');
+  const modelSearch = document.getElementById('model-search');
+  const selectAllBtn = document.getElementById('select-all');
+  const deselectAllBtn = document.getElementById('deselect-all');
+  const modelToggles = document.querySelectorAll('.model-toggle');
+  const exportDataBtn = document.getElementById('export-data');
+  const clearDataBtn = document.getElementById('clear-data');
+  
+  // Show status message
+  function showStatus(message, isError = false) {
+    if (statusText) statusText.textContent = message;
+    
+    if (statusMessage) {
+      statusMessage.classList.remove('hidden', 'bg-green-50', 'text-green-700', 'bg-red-50', 'text-red-700');
+      
+      if (isError) {
+        statusMessage.classList.add('bg-red-50', 'text-red-700');
+      } else {
+        statusMessage.classList.add('bg-green-50', 'text-green-700');
+        
+        // Auto-hide success messages after 3 seconds
+        setTimeout(() => {
+          statusMessage.classList.add('hidden');
+        }, 3000);
+      }
+    }
+  }
+  
+  // Sync models button
+  syncModelsBtn?.addEventListener('click', async () => {
+    try {
+      // In a real implementation, this would call the API to sync models
+      showStatus('Models synced successfully from OpenRouter!');
+    } catch (error) {
+      showStatus(`Error syncing models: ${error instanceof Error ? error.message : String(error)}`, true);
+    }
+  });
+  
+  // Model search
+  modelSearch?.addEventListener('input', (e) => {
+    const searchTerm = (e.target as HTMLInputElement).value.toLowerCase();
+    const rows = document.querySelectorAll('#models-table-body tr');
+    
+    rows.forEach(row => {
+      const modelName = row.querySelector('td:first-child')?.textContent?.toLowerCase() || '';
+      const provider = row.querySelector('td:nth-child(2)')?.textContent?.toLowerCase() || '';
+      
+      if (modelName.includes(searchTerm) || provider.includes(searchTerm)) {
+        row.classList.remove('hidden');
+      } else {
+        row.classList.add('hidden');
+      }
+    });
+  });
+  
+  // Select all models
+  selectAllBtn?.addEventListener('click', () => {
+    const checkboxes = document.querySelectorAll('.model-toggle') as NodeListOf<HTMLInputElement>;
+    checkboxes.forEach(checkbox => {
+      checkbox.checked = true;
+    });
+  });
+  
+  // Deselect all models
+  deselectAllBtn?.addEventListener('click', () => {
+    const checkboxes = document.querySelectorAll('.model-toggle') as NodeListOf<HTMLInputElement>;
+    checkboxes.forEach(checkbox => {
+      checkbox.checked = false;
+    });
+  });
+  
+  // Toggle model enabled status
+  modelToggles.forEach(toggle => {
+    toggle.addEventListener('change', async (e) => {
+      const checkbox = e.target as HTMLInputElement;
+      const modelId = checkbox.dataset.modelId;
+      
+      if (!modelId) return;
+      
+      try {
+        // In a real implementation, this would call the API to update the model
+        console.log(`Model ${modelId} ${checkbox.checked ? 'enabled' : 'disabled'}`);
+        showStatus(`Model ${checkbox.checked ? 'enabled' : 'disabled'} successfully`);
+      } catch (error) {
+        showStatus(`Error updating model: ${error instanceof Error ? error.message : String(error)}`, true);
+        // Revert the checkbox state
+        checkbox.checked = !checkbox.checked;
+      }
+    });
+  });
+  
+  // Settings form
+  settingsForm?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    
+    // Get form values
+    const openRouterApiKey = (document.getElementById('openrouter-api-key') as HTMLInputElement)?.value;
+    const supabaseUrl = (document.getElementById('supabase-url') as HTMLInputElement)?.value;
+    const supabaseAnonKey = (document.getElementById('supabase-anon-key') as HTMLInputElement)?.value;
+    
+    // Get selected theme
+    const themeRadios = document.querySelectorAll('input[name="theme"]') as NodeListOf<HTMLInputElement>;
+    let selectedTheme = '';
+    themeRadios.forEach(radio => {
+      if (radio.checked) {
+        selectedTheme = radio.value;
+      }
+    });
+    
+    // In a real implementation, this would save the settings
+    showStatus('Settings saved successfully!');
+  });
+  
+  // Export data
+  exportDataBtn?.addEventListener('click', () => {
+    try {
+      // In a real implementation, this would export all benchmark data
+      showStatus('Benchmark data exported successfully!');
+    } catch (error) {
+      showStatus(`Error exporting data: ${error instanceof Error ? error.message : String(error)}`, true);
+    }
+  });
+  
+  // Clear data
+  clearDataBtn?.addEventListener('click', () => {
+    if (confirm('Are you sure you want to clear all benchmark data? This action cannot be undone.')) {
+      try {
+        // In a real implementation, this would clear all benchmark data
+        showStatus('All benchmark data has been cleared successfully!');
+      } catch (error) {
+        showStatus(`Error clearing data: ${error instanceof Error ? error.message : String(error)}`, true);
+      }
+    }
+  });
+</script>

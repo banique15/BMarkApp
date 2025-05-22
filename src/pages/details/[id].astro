@@ -1,0 +1,382 @@
+---
+import MainLayout from '../../layouts/MainLayout.astro';
+import { supabase } from '../../utils/supabase';
+
+// Get the benchmark ID from the URL
+const { id } = Astro.params;
+
+// Fetch benchmark details from Supabase
+const { data: prompt, error: promptError } = await supabase
+  .from('prompts')
+  .select('id, text, created_at')
+  .eq('id', id)
+  .single();
+
+// Fetch responses for this prompt
+const { data: responses, error: responsesError } = await supabase
+  .from('responses')
+  .select(`
+    id,
+    model_id,
+    response_text,
+    response_time_ms,
+    created_at,
+    model:models(id, name, provider, model_id)
+  `)
+  .eq('prompt_id', id)
+  .order('response_time_ms', { ascending: true });
+
+// Process responses to extract model data
+const processedResponses = responses?.map(response => {
+  // Type assertion to help TypeScript understand the structure
+  const modelData = response.model as any;
+  return {
+    ...response,
+    modelName: modelData?.name || 'Unknown',
+    modelProvider: modelData?.provider || 'Unknown'
+  };
+}) || [];
+
+// Fetch consensus groups for this prompt
+const { data: consensusGroups, error: consensusError } = await supabase
+  .from('consensus_groups')
+  .select('id, group_name, count, color')
+  .eq('prompt_id', id)
+  .order('count', { ascending: false });
+
+// Process data for display
+const error = promptError || responsesError || consensusError;
+
+// Format date
+const date = prompt ? new Date(prompt.created_at) : null;
+const formattedDate = date ? date.toLocaleString('en-US', {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+  hour: 'numeric',
+  minute: 'numeric'
+}) : '';
+
+// Calculate statistics
+const totalResponses = responses?.length || 0;
+const avgResponseTime = responses ? Math.round(responses.reduce((sum, r) => sum + r.response_time_ms, 0) / totalResponses) : 0;
+const fastestResponse = responses ? Math.min(...responses.map(r => r.response_time_ms)) : 0;
+const slowestResponse = responses ? Math.max(...responses.map(r => r.response_time_ms)) : 0;
+
+// Calculate consensus percentages
+const totalModels = totalResponses;
+const consensusData = consensusGroups?.map(group => ({
+  ...group,
+  percentage: Math.round((group.count / totalModels) * 100)
+})) || [];
+---
+
+<MainLayout title={`Benchmark Details: ${prompt?.text || 'Not Found'}`}>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="mb-8">
+      <div class="flex items-center mb-4">
+        <a href="/history" class="text-blue-600 hover:text-blue-800 mr-2">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+          </svg>
+        </a>
+        <h1 class="text-3xl font-bold text-gray-900">Benchmark Details</h1>
+      </div>
+      
+      {error && (
+        <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
+          <div class="flex">
+            <div class="flex-shrink-0">
+              <svg class="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+              </svg>
+            </div>
+            <div class="ml-3">
+              <p class="text-sm text-red-700">Error loading benchmark details: {error.message}</p>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {!prompt && !error && (
+        <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 mb-4">
+          <div class="flex">
+            <div class="flex-shrink-0">
+              <svg class="h-5 w-5 text-yellow-500" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+              </svg>
+            </div>
+            <div class="ml-3">
+              <p class="text-sm text-yellow-700">Benchmark not found. It may have been deleted or the ID is invalid.</p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+    
+    {prompt && (
+      <div class="space-y-8">
+        <!-- Prompt Information -->
+        <div class="bg-white shadow rounded-lg overflow-hidden">
+          <div class="p-6 border-b border-gray-200">
+            <h2 class="text-xl font-semibold">Prompt Information</h2>
+          </div>
+          <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h3 class="text-sm font-medium text-gray-500">Prompt Text</h3>
+                <p class="mt-1 text-lg text-gray-900">{prompt.text}</p>
+              </div>
+              <div>
+                <h3 class="text-sm font-medium text-gray-500">Date</h3>
+                <p class="mt-1 text-lg text-gray-900">{formattedDate}</p>
+              </div>
+              <div>
+                <h3 class="text-sm font-medium text-gray-500">Models Used</h3>
+                <p class="mt-1 text-lg text-gray-900">{totalResponses} models</p>
+              </div>
+              <div>
+                <h3 class="text-sm font-medium text-gray-500">Average Response Time</h3>
+                <p class="mt-1 text-lg text-gray-900">{avgResponseTime} ms</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Consensus Analysis -->
+        <div class="bg-white shadow rounded-lg overflow-hidden">
+          <div class="p-6 border-b border-gray-200">
+            <h2 class="text-xl font-semibold">Consensus Analysis</h2>
+          </div>
+          <div class="p-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <!-- Consensus Chart -->
+              <div class="bg-gray-50 rounded-lg p-4">
+                <h3 class="text-sm font-medium text-gray-700 mb-2">Response Distribution</h3>
+                <div class="relative h-64">
+                  <canvas id="consensus-chart" class="w-full h-full"></canvas>
+                </div>
+              </div>
+              
+              <!-- Consensus Groups -->
+              <div class="bg-gray-50 rounded-lg p-4">
+                <h3 class="text-sm font-medium text-gray-700 mb-2">Response Groups</h3>
+                <div class="space-y-2">
+                  {consensusData.map(group => (
+                    <div class="flex items-center justify-between p-2 rounded hover:bg-gray-100">
+                      <div class="flex items-center">
+                        <div class="w-4 h-4 rounded-full mr-2 flex-shrink-0" style={`background-color: ${group.color}`}></div>
+                        <div>
+                          <span class="font-medium text-sm">{group.group_name}</span>
+                        </div>
+                      </div>
+                      <div class="text-right">
+                        <span class="text-sm font-medium">{group.count}</span>
+                        <span class="text-xs text-gray-500 block">{group.percentage}%</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Model Responses -->
+        <div class="bg-white shadow rounded-lg overflow-hidden">
+          <div class="p-6 border-b border-gray-200">
+            <h2 class="text-xl font-semibold">Model Responses</h2>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Model
+                  </th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Provider
+                  </th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Response
+                  </th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Time
+                  </th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200">
+                {processedResponses.map((response, index) => (
+                  <tr class={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="text-sm font-medium text-gray-900">{response.modelName}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="text-sm text-gray-500">{response.modelProvider}</div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="text-sm text-gray-900 font-mono">{response.response_text}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="text-sm text-gray-500">{response.response_time_ms} ms</div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        
+        <!-- Export Options -->
+        <div class="bg-white shadow rounded-lg overflow-hidden">
+          <div class="p-6 border-b border-gray-200">
+            <h2 class="text-xl font-semibold">Export Options</h2>
+          </div>
+          <div class="p-6">
+            <div class="flex flex-wrap gap-4">
+              <button id="export-csv" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                <svg class="mr-2 -ml-1 h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Export as CSV
+              </button>
+              <button id="export-json" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                <svg class="mr-2 -ml-1 h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Export as JSON
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
+</MainLayout>
+
+<script>
+  // Import Chart.js
+  import Chart from 'chart.js/auto';
+  
+  // Declare global window property for the chart
+  declare global {
+    interface Window {
+      detailsChart?: any;
+    }
+  }
+  
+  // Get consensus data from the server
+  const consensusData = JSON.parse(document.getElementById('consensus-data')?.getAttribute('data-consensus') || '[]');
+  
+  // Render chart if canvas exists
+  const chartCanvas = document.getElementById('consensus-chart') as HTMLCanvasElement;
+  if (chartCanvas && consensusData.length > 0) {
+    const ctx = chartCanvas.getContext('2d');
+    if (ctx) {
+      // Prepare data for chart
+      const labels = consensusData.map((group: any) => group.group_name);
+      const data = consensusData.map((group: any) => group.count);
+      const colors = consensusData.map((group: any) => group.color);
+      
+      // Create chart
+      window.detailsChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: data,
+            backgroundColor: colors,
+            borderColor: colors.map((color: string) => color + '80'),
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const label = context.label || '';
+                  const value = context.raw as number;
+                  const total = data.reduce((a, b) => a + b, 0);
+                  const percentage = Math.round((value / total) * 100);
+                  return `${label}: ${value} (${percentage}%)`;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+  }
+  
+  // Export functionality
+  document.getElementById('export-csv')?.addEventListener('click', () => {
+    const responses = JSON.parse(document.getElementById('responses-data')?.getAttribute('data-responses') || '[]');
+    const prompt = document.getElementById('prompt-data')?.getAttribute('data-prompt') || '';
+    
+    // Create CSV content
+    let csv = 'Model,Provider,Response,Time (ms)\n';
+    
+    responses.forEach((response: any) => {
+      const model = response.modelName;
+      const provider = response.modelProvider;
+      const responseText = `"${response.response_text.replace(/"/g, '""')}"`;
+      const time = response.response_time_ms;
+      
+      csv += `${model},${provider},${responseText},${time}\n`;
+    });
+    
+    // Create download link
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `benchmark-${prompt.replace(/[^a-z0-9]/gi, '-').toLowerCase()}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  });
+  
+  document.getElementById('export-json')?.addEventListener('click', () => {
+    const responses = JSON.parse(document.getElementById('responses-data')?.getAttribute('data-responses') || '[]');
+    const consensus = JSON.parse(document.getElementById('consensus-data')?.getAttribute('data-consensus') || '[]');
+    const prompt = document.getElementById('prompt-data')?.getAttribute('data-prompt') || '';
+    const date = document.getElementById('prompt-data')?.getAttribute('data-date') || '';
+    
+    // Create JSON content
+    const data = {
+      prompt,
+      date,
+      responses: responses.map((response: any) => ({
+        model: response.modelName,
+        provider: response.modelProvider,
+        response: response.response_text,
+        time_ms: response.response_time_ms
+      })),
+      consensus: consensus.map((group: any) => ({
+        response: group.group_name,
+        count: group.count,
+        percentage: group.percentage
+      }))
+    };
+    
+    // Create download link
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `benchmark-${prompt.replace(/[^a-z0-9]/gi, '-').toLowerCase()}.json`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  });
+</script>
+
+<!-- Hidden data elements for JavaScript -->
+<div id="consensus-data" data-consensus={JSON.stringify(consensusData)} style="display: none;"></div>
+<div id="responses-data" data-responses={JSON.stringify(processedResponses)} style="display: none;"></div>
+<div id="prompt-data" data-prompt={prompt?.text || ''} data-date={formattedDate} style="display: none;"></div>

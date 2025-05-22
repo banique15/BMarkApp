@@ -1,0 +1,236 @@
+---
+import MainLayout from '../layouts/MainLayout.astro';
+---
+
+<MainLayout title="Documentation">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="flex justify-between items-center mb-8">
+      <h1 class="text-3xl font-bold text-gray-900">Documentation</h1>
+      <a href="/" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+        Back to Benchmark
+      </a>
+    </div>
+    
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <!-- Sidebar Navigation -->
+      <div class="md:col-span-1">
+        <div class="bg-white shadow rounded-lg overflow-hidden sticky top-4">
+          <div class="p-4 border-b border-gray-200">
+            <h2 class="text-lg font-medium text-gray-900">Contents</h2>
+          </div>
+          <nav class="p-2">
+            <a href="#introduction" class="block px-3 py-2 rounded-md text-base font-medium text-gray-900 bg-gray-100">
+              Introduction
+            </a>
+            <a href="#getting-started" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50">
+              Getting Started
+            </a>
+            <a href="#features" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50">
+              Features
+            </a>
+            <a href="#api" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50">
+              API Reference
+            </a>
+            <a href="#faq" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50">
+              FAQ
+            </a>
+          </nav>
+        </div>
+      </div>
+      
+      <!-- Main Content -->
+      <div class="md:col-span-3 space-y-8">
+        <section id="introduction" class="bg-white shadow rounded-lg overflow-hidden">
+          <div class="p-6">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">Introduction</h2>
+            <p class="text-gray-600 mb-4">
+              The LLM Consensus Benchmark is a tool for comparing responses from multiple Large Language Models (LLMs) to the same prompt and visualizing the consensus among their answers.
+            </p>
+            <p class="text-gray-600 mb-4">
+              This application is designed to help researchers, developers, and AI enthusiasts understand how different LLMs respond to the same input and identify patterns in their responses.
+            </p>
+            <p class="text-gray-600">
+              By focusing on single-word responses, the tool makes it easy to quantify and visualize the level of agreement between different models, providing insights into their behavior and capabilities.
+            </p>
+          </div>
+        </section>
+        
+        <section id="getting-started" class="bg-white shadow rounded-lg overflow-hidden">
+          <div class="p-6">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">Getting Started</h2>
+            <h3 class="text-xl font-semibold text-gray-900 mb-2">Prerequisites</h3>
+            <ul class="list-disc pl-6 mb-4 text-gray-600 space-y-2">
+              <li>An OpenRouter API key to access multiple LLM providers</li>
+              <li>A Supabase account for storing benchmark results</li>
+            </ul>
+            
+            <h3 class="text-xl font-semibold text-gray-900 mb-2">Setup</h3>
+            <ol class="list-decimal pl-6 mb-4 text-gray-600 space-y-2">
+              <li>Go to the <a href="/settings" class="text-blue-600 hover:text-blue-800">Settings</a> page</li>
+              <li>Enter your OpenRouter API key and Supabase credentials</li>
+              <li>Sync models from OpenRouter to see available LLMs</li>
+              <li>Select which models you want to include in your benchmarks</li>
+            </ol>
+            
+            <h3 class="text-xl font-semibold text-gray-900 mb-2">Running Your First Benchmark</h3>
+            <ol class="list-decimal pl-6 mb-4 text-gray-600 space-y-2">
+              <li>Go to the <a href="/" class="text-blue-600 hover:text-blue-800">Benchmark</a> page</li>
+              <li>Enter a prompt that will elicit a single-word response (e.g., "What is the capital of France?")</li>
+              <li>Click "Submit" to send the prompt to all selected models</li>
+              <li>View the responses as they arrive and the consensus visualization</li>
+            </ol>
+          </div>
+        </section>
+        
+        <section id="features" class="bg-white shadow rounded-lg overflow-hidden">
+          <div class="p-6">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">Features</h2>
+            
+            <div class="space-y-4">
+              <div>
+                <h3 class="text-xl font-semibold text-gray-900 mb-2">Prompt Input</h3>
+                <p class="text-gray-600">
+                  Enter prompts that elicit single-word responses from LLMs. The application provides example prompts to help you get started.
+                </p>
+              </div>
+              
+              <div>
+                <h3 class="text-xl font-semibold text-gray-900 mb-2">Model Selection</h3>
+                <p class="text-gray-600">
+                  Choose which LLMs to include in your benchmark from a wide range of providers, including OpenAI, Anthropic, Google, Meta, and more.
+                </p>
+              </div>
+              
+              <div>
+                <h3 class="text-xl font-semibold text-gray-900 mb-2">Real-time Results</h3>
+                <p class="text-gray-600">
+                  See responses from each model as they arrive, with loading indicators for models that are still processing.
+                </p>
+              </div>
+              
+              <div>
+                <h3 class="text-xl font-semibold text-gray-900 mb-2">Consensus Visualization</h3>
+                <p class="text-gray-600">
+                  View a visual representation of the consensus among model responses, with similar answers grouped together and color-coded.
+                </p>
+              </div>
+              
+              <div>
+                <h3 class="text-xl font-semibold text-gray-900 mb-2">Response Time Tracking</h3>
+                <p class="text-gray-600">
+                  Compare the performance of different models by seeing how long each one takes to respond.
+                </p>
+              </div>
+              
+              <div>
+                <h3 class="text-xl font-semibold text-gray-900 mb-2">Historical Data</h3>
+                <p class="text-gray-600">
+                  Access past benchmark results to compare how models respond to different prompts over time.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+        
+        <section id="api" class="bg-white shadow rounded-lg overflow-hidden">
+          <div class="p-6">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">API Reference</h2>
+            
+            <div class="space-y-6">
+              <div>
+                <h3 class="text-xl font-semibold text-gray-900 mb-2">GET /api/models</h3>
+                <p class="text-gray-600 mb-2">
+                  Retrieves the list of available models from OpenRouter and their enabled status.
+                </p>
+                <div class="bg-gray-100 p-4 rounded-md overflow-x-auto">
+                  <p class="font-mono text-sm">
+                    // Response example<br />
+                    // Contains a "models" array with model objects
+                  </p>
+                </div>
+              </div>
+              
+              <div>
+                <h3 class="text-xl font-semibold text-gray-900 mb-2">POST /api/prompt</h3>
+                <p class="text-gray-600 mb-2">
+                  Submits a prompt to be sent to the selected models.
+                </p>
+                <h4 class="text-lg font-medium text-gray-900 mb-1">Request:</h4>
+                <div class="bg-gray-100 p-4 rounded-md overflow-x-auto mb-2">
+                  <p class="font-mono text-sm">
+                    // Request example<br />
+                    // Contains "text" (prompt text) and "model_ids" (array of model IDs)
+                  </p>
+                </div>
+                <h4 class="text-lg font-medium text-gray-900 mb-1">Response:</h4>
+                <div class="bg-gray-100 p-4 rounded-md overflow-x-auto">
+                  <p class="font-mono text-sm">
+                    // Response example<br />
+                    // Contains "prompt_id", "responses" array, and "consensus_groups" array
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        
+        <section id="faq" class="bg-white shadow rounded-lg overflow-hidden">
+          <div class="p-6">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">Frequently Asked Questions</h2>
+            
+            <div class="space-y-4">
+              <div>
+                <h3 class="text-xl font-semibold text-gray-900 mb-1">What is OpenRouter?</h3>
+                <p class="text-gray-600">
+                  OpenRouter is a service that provides a unified API to access multiple LLM providers through a single endpoint. It simplifies the process of integrating with different LLM providers and allows you to use models from OpenAI, Anthropic, Google, and more with a single API key.
+                </p>
+              </div>
+              
+              <div>
+                <h3 class="text-xl font-semibold text-gray-900 mb-1">Why focus on single-word responses?</h3>
+                <p class="text-gray-600">
+                  Single-word responses are easier to compare and analyze for consensus. They allow for clear visualization of agreement between models and make it simpler to identify patterns in how different LLMs respond to the same prompt.
+                </p>
+              </div>
+              
+              <div>
+                <h3 class="text-xl font-semibold text-gray-900 mb-1">How does the consensus analysis work?</h3>
+                <p class="text-gray-600">
+                  The consensus analysis algorithm normalizes responses (converting to lowercase, removing punctuation, etc.), groups identical responses together, and optionally applies similarity measures to group near-matches. It then assigns colors to each group and calculates the percentage of models in each group.
+                </p>
+              </div>
+              
+              <div>
+                <h3 class="text-xl font-semibold text-gray-900 mb-1">Can I export the benchmark results?</h3>
+                <p class="text-gray-600">
+                  This feature is planned for a future update. You will be able to export results in CSV, JSON, and other formats for further analysis.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+</MainLayout>
+
+<script>
+  // Navigation
+  const navLinks = document.querySelectorAll('nav a');
+  navLinks.forEach(link => {
+    link.addEventListener('click', (e) => {
+      // Update active state
+      navLinks.forEach(l => {
+        l.classList.remove('bg-gray-100');
+        l.classList.add('hover:bg-gray-50');
+        l.classList.remove('text-gray-900');
+        l.classList.add('text-gray-700');
+      });
+      
+      link.classList.add('bg-gray-100');
+      link.classList.remove('hover:bg-gray-50');
+      link.classList.add('text-gray-900');
+      link.classList.remove('text-gray-700');
+    });
+  });
+</script>

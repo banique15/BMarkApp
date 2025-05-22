@@ -1,0 +1,1168 @@
+---
+import MainLayout from '../layouts/MainLayout.astro';
+---
+
+<MainLayout title="LLM Consensus Benchmark">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="text-center mb-12">
+      <h1 class="text-4xl font-bold text-gray-900 mb-4">
+        LLM Consensus Benchmark
+      </h1>
+      <p class="text-xl text-gray-600">
+        Compare single-word responses from multiple LLMs and visualize their consensus
+      </p>
+    </div>
+
+    <!-- Error Alert -->
+    <div id="error-alert" class="bg-red-50 border-l-4 border-red-500 p-4 mb-4 hidden">
+      <div class="flex">
+        <div class="flex-shrink-0">
+          <svg class="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+          </svg>
+        </div>
+        <div class="ml-3">
+          <p id="error-message" class="text-sm text-red-700"></p>
+        </div>
+        <div class="ml-auto pl-3">
+          <div class="-mx-1.5 -my-1.5">
+            <button id="close-error" class="inline-flex rounded-md p-1.5 text-red-500 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500">
+              <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Prompt Input -->
+    <div class="bg-white shadow rounded-lg p-6 mb-8">
+      <h2 class="text-xl font-semibold mb-4">Enter a Prompt</h2>
+      <p class="text-gray-600 mb-4">
+        Enter a prompt that will elicit a single-word response from the LLMs.
+      </p>
+      <form id="prompt-form" class="mb-4">
+        <div class="flex">
+          <input 
+            type="text" 
+            id="prompt-input"
+            placeholder="e.g., What is the capital of France?"
+            class="flex-1 px-4 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+          />
+          <button 
+            type="submit"
+            id="submit-button"
+            class="bg-blue-600 text-white px-6 py-2 rounded-r-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            Submit
+          </button>
+        </div>
+      </form>
+      <div class="text-sm text-gray-500">
+        <button id="show-examples" class="text-blue-600 hover:text-blue-800">Show example prompts</button>
+      </div>
+      <div id="example-prompts" class="mt-4 p-4 bg-gray-50 rounded-md hidden">
+        <h3 class="text-sm font-medium text-gray-700 mb-2">Example Prompts:</h3>
+        <div class="flex flex-wrap gap-2">
+          <button class="example-prompt text-sm bg-white px-3 py-1 rounded border border-gray-300 hover:bg-gray-100">
+            What is the capital of France?
+          </button>
+          <button class="example-prompt text-sm bg-white px-3 py-1 rounded border border-gray-300 hover:bg-gray-100">
+            What is the largest planet in our solar system?
+          </button>
+          <button class="example-prompt text-sm bg-white px-3 py-1 rounded border border-gray-300 hover:bg-gray-100">
+            What color is the sky?
+          </button>
+          <button class="example-prompt text-sm bg-white px-3 py-1 rounded border border-gray-300 hover:bg-gray-100">
+            What is the chemical symbol for gold?
+          </button>
+          <button class="example-prompt text-sm bg-white px-3 py-1 rounded border border-gray-300 hover:bg-gray-100">
+            What is the tallest mountain on Earth?
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Model Selection -->
+    <div class="bg-white shadow rounded-lg p-4 mb-8">
+      <div class="flex flex-wrap justify-between items-center mb-3">
+        <div class="flex items-center space-x-2">
+          <h2 class="text-xl font-semibold">Models</h2>
+          <span id="selected-count" class="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs font-medium">
+            0 selected
+          </span>
+        </div>
+        <button
+          id="sync-models"
+          class="px-3 py-1 rounded text-sm bg-blue-100 text-blue-700 hover:bg-blue-200 flex items-center"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Sync with OpenRouter
+        </button>
+      </div>
+      
+      <!-- Search and Actions Bar -->
+      <div class="flex flex-wrap items-center gap-2 mb-3">
+        <!-- Search -->
+        <div class="relative flex-1 min-w-[200px]">
+          <div class="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
+            <svg class="h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <input
+            type="text"
+            id="model-search"
+            placeholder="Search models..."
+            class="pl-7 w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+        </div>
+        
+        <!-- Filters -->
+        <select
+          id="provider-filter"
+          class="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+        >
+          <option value="all">All Providers</option>
+          <!-- Provider options will be added dynamically -->
+        </select>
+        
+        <select
+          id="sort-models"
+          class="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+        >
+          <option value="provider">Sort by Provider</option>
+          <option value="name">Sort by Name</option>
+          <option value="context">Sort by Context</option>
+        </select>
+        
+        <!-- Quick Actions -->
+        <div class="flex gap-1">
+          <button
+            id="select-recommended"
+            class="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-medium hover:bg-blue-100"
+            title="Select recommended models for benchmarking"
+          >
+            Recommended
+          </button>
+          <button
+            id="select-all"
+            class="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs hover:bg-gray-200"
+            title="Select all models"
+          >
+            All
+          </button>
+          <button
+            id="deselect-all"
+            class="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs hover:bg-gray-200"
+            title="Deselect all models"
+          >
+            None
+          </button>
+        </div>
+      </div>
+      
+      <!-- Loading State -->
+      <div id="models-loading" class="animate-pulse space-y-2">
+        <div class="h-8 bg-gray-200 rounded"></div>
+        <div class="h-64 bg-gray-100 rounded">
+          <div class="grid grid-cols-4 gap-2 p-2">
+            {Array(12).fill(0).map((_, i) => (
+              <div class="h-5 bg-gray-200 rounded"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+      
+      <!-- Models Table -->
+      <div id="models-container" class="hidden">
+        <!-- Models will be dynamically added here -->
+      </div>
+      
+      <!-- Empty State -->
+      <div id="no-models-message" class="hidden text-center py-6">
+        <svg class="mx-auto h-10 w-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <h3 class="mt-2 text-sm font-medium text-gray-900">No models found</h3>
+        <p class="text-sm text-gray-500">Click "Sync with OpenRouter" to fetch models.</p>
+      </div>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div id="loading-spinner" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 hidden">
+      <div class="bg-white p-5 rounded-lg shadow-xl flex flex-col items-center">
+        <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500 mb-4"></div>
+        <p class="text-gray-700 text-lg font-medium">Processing your prompt...</p>
+        <p class="text-gray-500 text-sm mt-2">This may take a few seconds</p>
+      </div>
+    </div>
+
+    <!-- Response Grid -->
+    <div id="response-grid" class="bg-white shadow rounded-lg p-6 mb-8 hidden">
+      <h2 class="text-xl font-semibold mb-4">Responses</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <!-- Response cards will be added here -->
+      </div>
+    </div>
+
+    <!-- Consensus Visualization -->
+    <div id="consensus-view" class="bg-white shadow rounded-lg p-6 mb-8 hidden">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-semibold">Consensus Visualization</h2>
+        <div class="flex space-x-2">
+          <button
+            id="export-results"
+            class="px-3 py-1 bg-gray-100 text-gray-700 rounded-md text-sm hover:bg-gray-200 flex items-center"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Export Results
+          </button>
+        </div>
+      </div>
+      
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Chart Section -->
+        <div class="bg-gray-50 rounded-lg p-4">
+          <h3 class="text-sm font-medium text-gray-700 mb-2">Response Distribution</h3>
+          <div class="relative">
+            <canvas id="consensus-chart" class="h-64 md:h-80 w-full"></canvas>
+          </div>
+        </div>
+        
+        <!-- Statistics Section -->
+        <div class="bg-gray-50 rounded-lg p-4">
+          <h3 class="text-sm font-medium text-gray-700 mb-2">Consensus Statistics</h3>
+          <div class="space-y-4">
+            <div id="consensus-stats" class="grid grid-cols-2 gap-4">
+              <!-- Stats will be added here -->
+            </div>
+            
+            <div class="border-t border-gray-200 pt-4">
+              <h4 class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Response Groups</h4>
+              <div id="consensus-legend" class="space-y-2">
+                <!-- Legend items will be added here -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Similarity Analysis -->
+      <div class="mt-6 bg-gray-50 rounded-lg p-4">
+        <h3 class="text-sm font-medium text-gray-700 mb-2">Response Similarity Analysis</h3>
+        <p class="text-xs text-gray-500 mb-4">
+          This analysis shows how similar the responses are across different models, helping identify patterns and outliers.
+        </p>
+        <div id="similarity-matrix" class="overflow-x-auto">
+          <!-- Similarity matrix will be added here -->
+        </div>
+      </div>
+    </div>
+  </div>
+</MainLayout>
+
+<script>
+  // Import Chart.js
+  import Chart from 'chart.js/auto';
+  
+  // Declare global window property for the chart
+  declare global {
+    interface Window {
+      consensusChart?: any;
+    }
+  }
+  // DOM Elements
+  const errorAlert = document.getElementById('error-alert');
+  const errorMessage = document.getElementById('error-message');
+  const closeErrorBtn = document.getElementById('close-error');
+  const promptForm = document.getElementById('prompt-form');
+  const promptInput = document.getElementById('prompt-input') as HTMLInputElement;
+  const submitButton = document.getElementById('submit-button') as HTMLButtonElement;
+  const showExamplesBtn = document.getElementById('show-examples');
+  const examplePromptsDiv = document.getElementById('example-prompts');
+  const examplePromptBtns = document.querySelectorAll('.example-prompt');
+  const syncModelsBtn = document.getElementById('sync-models') as HTMLButtonElement;
+  const modelsLoading = document.getElementById('models-loading');
+  const modelsContainer = document.getElementById('models-container');
+  const noModelsMessage = document.getElementById('no-models-message');
+  const responseGrid = document.getElementById('response-grid');
+  const consensusView = document.getElementById('consensus-view');
+  const loadingSpinner = document.getElementById('loading-spinner');
+  const selectedCountEl = document.getElementById('selected-count');
+  const modelSearchInput = document.getElementById('model-search') as HTMLInputElement;
+  const providerFilterSelect = document.getElementById('provider-filter') as HTMLSelectElement;
+  const sortModelsSelect = document.getElementById('sort-models') as HTMLSelectElement;
+  const selectAllBtn = document.getElementById('select-all');
+  const deselectAllBtn = document.getElementById('deselect-all');
+  const selectRecommendedBtn = document.getElementById('select-recommended');
+
+  // State
+  let models: any[] = [];
+  let selectedModelIds: string[] = [];
+  let filteredModels: any[] = [];
+  let providers: string[] = [];
+  let searchTerm = '';
+  let providerFilter = 'all';
+  let sortBy = 'provider';
+  
+  // Recommended model IDs (these should match the model_id values from OpenRouter)
+  const recommendedModelIds = [
+    'openai/gpt-4o',
+    'anthropic/claude-3-sonnet',
+    'google/gemini-pro-1.5',
+    'meta-llama/llama-3-70b-instruct',
+    'mistralai/mistral-large',
+    'cohere/command-r'
+  ];
+
+  // Error handling
+  closeErrorBtn?.addEventListener('click', () => {
+    errorAlert?.classList.add('hidden');
+  });
+
+  function showError(message: string) {
+    if (errorMessage) errorMessage.textContent = message;
+    errorAlert?.classList.remove('hidden');
+  }
+
+  // Example prompt buttons
+  showExamplesBtn?.addEventListener('click', () => {
+    examplePromptsDiv?.classList.toggle('hidden');
+    if (showExamplesBtn) {
+      showExamplesBtn.textContent = examplePromptsDiv?.classList.contains('hidden') 
+        ? 'Show example prompts' 
+        : 'Hide example prompts';
+    }
+  });
+
+  examplePromptBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (promptInput) promptInput.value = btn.textContent?.trim() || '';
+      examplePromptsDiv?.classList.add('hidden');
+      if (showExamplesBtn) {
+        showExamplesBtn.textContent = 'Show example prompts';
+      }
+    });
+  });
+
+  // Fetch models from API
+  async function fetchModels() {
+    try {
+      modelsLoading?.classList.remove('hidden');
+      modelsContainer?.classList.add('hidden');
+      noModelsMessage?.classList.add('hidden');
+      
+      const response = await fetch('/api/models');
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch models');
+      }
+      
+      models = data.models || [];
+      
+      if (models.length === 0) {
+        noModelsMessage?.classList.remove('hidden');
+      } else {
+        // Extract providers
+        providers = [...new Set(models.map(model => model.provider))];
+        updateProviderFilter();
+        
+        // Apply filters and sort
+        filterAndSortModels();
+        renderModels();
+      }
+    } catch (error) {
+      showError(`Error fetching models: ${error instanceof Error ? error.message : String(error)}`);
+      noModelsMessage?.classList.remove('hidden');
+    } finally {
+      modelsLoading?.classList.add('hidden');
+    }
+  }
+
+  // Sync models with OpenRouter
+  async function syncModels() {
+    try {
+      modelsLoading?.classList.remove('hidden');
+      modelsContainer?.classList.add('hidden');
+      noModelsMessage?.classList.add('hidden');
+      
+      if (syncModelsBtn) {
+        syncModelsBtn.textContent = 'Syncing...';
+        syncModelsBtn.disabled = true;
+      }
+      
+      const response = await fetch('/api/models', {
+        method: 'POST'
+      });
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to sync models');
+      }
+      
+      models = data.models || [];
+      
+      if (models.length === 0) {
+        noModelsMessage?.classList.remove('hidden');
+      } else {
+        // Extract providers
+        providers = [...new Set(models.map(model => model.provider))];
+        updateProviderFilter();
+        
+        // Apply filters and sort
+        filterAndSortModels();
+        renderModels();
+        
+        // Show success message
+        alert(`Successfully synced ${models.length} models from OpenRouter!`);
+      }
+    } catch (error) {
+      showError(`Error syncing models: ${error instanceof Error ? error.message : String(error)}`);
+      noModelsMessage?.classList.remove('hidden');
+    } finally {
+      modelsLoading?.classList.add('hidden');
+      if (syncModelsBtn) {
+        syncModelsBtn.innerHTML = `
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Sync with OpenRouter
+        `;
+        syncModelsBtn.disabled = false;
+      }
+    }
+  }
+
+  // Update provider filter dropdown
+  function updateProviderFilter() {
+    if (!providerFilterSelect) return;
+    
+    // Clear existing options except the first one
+    while (providerFilterSelect.options.length > 1) {
+      providerFilterSelect.remove(1);
+    }
+    
+    // Add provider options
+    providers.sort().forEach(provider => {
+      const option = document.createElement('option');
+      option.value = provider;
+      option.textContent = provider;
+      providerFilterSelect.appendChild(option);
+    });
+  }
+
+  // Filter and sort models
+  function filterAndSortModels() {
+    // Filter by search term and provider
+    filteredModels = models.filter(model => {
+      const matchesSearch = searchTerm === '' ||
+        model.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        model.provider.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        model.model_id.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesProvider = providerFilter === 'all' || model.provider === providerFilter;
+      
+      return matchesSearch && matchesProvider;
+    });
+    
+    // Sort models
+    filteredModels.sort((a, b) => {
+      switch (sortBy) {
+        case 'name':
+          return a.name.localeCompare(b.name);
+        case 'context':
+          return (b.context_length || 0) - (a.context_length || 0);
+        case 'provider':
+        default:
+          return a.provider === b.provider
+            ? a.name.localeCompare(b.name)
+            : a.provider.localeCompare(b.provider);
+      }
+    });
+  }
+
+  // Render models in the UI
+  function renderModels() {
+    if (!modelsContainer) return;
+    
+    modelsContainer.innerHTML = '';
+    
+    if (filteredModels.length === 0) {
+      modelsContainer.innerHTML = '<p class="text-gray-500 text-center py-4">No models match your search criteria.</p>';
+      modelsContainer.classList.remove('hidden');
+      return;
+    }
+    
+    // Group models by provider
+    const providerGroups = new Map<string, any[]>();
+    
+    filteredModels.forEach(model => {
+      if (!providerGroups.has(model.provider)) {
+        providerGroups.set(model.provider, []);
+      }
+      providerGroups.get(model.provider)?.push(model);
+    });
+    
+    // Create provider sections
+    const providerSections = document.createDocumentFragment();
+    
+    // Sort providers alphabetically
+    const sortedProviders = Array.from(providerGroups.keys()).sort();
+    
+    // Create a table for all models
+    const table = document.createElement('table');
+    table.className = 'min-w-full divide-y divide-gray-200';
+    
+    // Create table header
+    const thead = document.createElement('thead');
+    thead.className = 'bg-gray-50';
+    
+    const headerRow = document.createElement('tr');
+    
+    const headers = [
+      { text: 'Model', className: 'px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' },
+      { text: 'Provider', className: 'px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell' },
+      { text: 'Context', className: 'px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell' },
+      { text: '', className: 'relative px-3 py-2 w-10' }
+    ];
+    
+    headers.forEach(header => {
+      const th = document.createElement('th');
+      th.className = header.className;
+      th.textContent = header.text;
+      headerRow.appendChild(th);
+    });
+    
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+    
+    // Create table body
+    const tbody = document.createElement('tbody');
+    tbody.className = 'bg-white divide-y divide-gray-200';
+    
+    // Add models to table
+    let currentProvider = '';
+    let rowCount = 0;
+    
+    filteredModels.forEach(model => {
+      const isRecommended = recommendedModelIds.includes(model.model_id);
+      const isNewProvider = currentProvider !== model.provider;
+      
+      if (isNewProvider) {
+        currentProvider = model.provider;
+      }
+      
+      const row = document.createElement('tr');
+      row.className = `${rowCount % 2 === 0 ? 'bg-white' : 'bg-gray-50'} ${isRecommended ? 'bg-blue-50 hover:bg-blue-100' : 'hover:bg-gray-100'}`;
+      
+      // Model name cell
+      const nameCell = document.createElement('td');
+      nameCell.className = 'px-3 py-2 whitespace-nowrap';
+      
+      const nameDiv = document.createElement('div');
+      nameDiv.className = 'flex items-center';
+      
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.id = `model-${model.id}`;
+      checkbox.className = 'h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500';
+      checkbox.checked = model.enabled;
+      checkbox.addEventListener('change', () => toggleModel(model.id));
+      
+      const nameLabel = document.createElement('label');
+      nameLabel.htmlFor = `model-${model.id}`;
+      nameLabel.className = 'ml-2 text-sm font-medium text-gray-900';
+      nameLabel.textContent = model.name;
+      
+      nameDiv.appendChild(checkbox);
+      nameDiv.appendChild(nameLabel);
+      nameCell.appendChild(nameDiv);
+      
+      // Provider cell
+      const providerCell = document.createElement('td');
+      providerCell.className = 'px-3 py-2 whitespace-nowrap hidden md:table-cell';
+      
+      const providerDiv = document.createElement('div');
+      providerDiv.className = 'text-sm text-gray-500';
+      providerDiv.textContent = model.provider;
+      
+      providerCell.appendChild(providerDiv);
+      
+      // Context length cell
+      const contextCell = document.createElement('td');
+      contextCell.className = 'px-3 py-2 whitespace-nowrap hidden lg:table-cell';
+      
+      const contextDiv = document.createElement('div');
+      contextDiv.className = 'text-sm text-gray-500';
+      contextDiv.textContent = model.context_length?.toLocaleString() || 'Unknown';
+      
+      contextCell.appendChild(contextDiv);
+      
+      // Badge cell
+      const badgeCell = document.createElement('td');
+      badgeCell.className = 'px-3 py-2 whitespace-nowrap text-right text-sm font-medium';
+      
+      if (isRecommended) {
+        const badge = document.createElement('span');
+        badge.className = 'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800';
+        badge.textContent = '★';
+        badge.title = 'Recommended';
+        badgeCell.appendChild(badge);
+      }
+      
+      // Add cells to row
+      row.appendChild(nameCell);
+      row.appendChild(providerCell);
+      row.appendChild(contextCell);
+      row.appendChild(badgeCell);
+      
+      // Add row to table body
+      tbody.appendChild(row);
+      rowCount++;
+    });
+    
+    table.appendChild(tbody);
+    
+    // Add table to container with fixed height and scrolling
+    const tableContainer = document.createElement('div');
+    tableContainer.className = 'overflow-x-auto overflow-y-auto max-h-64 rounded-lg border border-gray-200 shadow-sm';
+    tableContainer.appendChild(table);
+    
+    modelsContainer.appendChild(tableContainer);
+    modelsContainer.classList.remove('hidden');
+    
+    // Update selected count
+    updateSelectedCount();
+  }
+
+  // Toggle model enabled status
+  async function toggleModel(modelId: string) {
+    try {
+      const model = models.find(m => m.id === modelId);
+      if (!model) return;
+      
+      // Optimistically update UI
+      model.enabled = !model.enabled;
+      
+      // Update selected model IDs
+      updateSelectedModelIds();
+      
+      // Update in database
+      const response = await fetch('/api/models', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          id: modelId,
+          enabled: model.enabled
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        // Revert on error
+        model.enabled = !model.enabled;
+        updateSelectedModelIds();
+        throw new Error(data.error || 'Failed to update model');
+      }
+    } catch (error) {
+      showError(`Error updating model: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  // Update selected model IDs
+  function updateSelectedModelIds() {
+    selectedModelIds = models
+      .filter(model => model.enabled)
+      .map(model => model.id);
+    
+    updateSelectedCount();
+  }
+  
+  // Update selected count
+  function updateSelectedCount() {
+    if (selectedCountEl) {
+      const count = selectedModelIds.length;
+      selectedCountEl.textContent = `${count} selected`;
+    }
+  }
+  
+  // Select all models
+  function selectAllModels() {
+    filteredModels.forEach(model => {
+      model.enabled = true;
+    });
+    
+    updateSelectedModelIds();
+    renderModels();
+    
+    // Update in database
+    Promise.all(
+      filteredModels.map(model =>
+        fetch('/api/models', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            id: model.id,
+            enabled: true
+          })
+        })
+      )
+    ).catch(error => {
+      showError(`Error updating models: ${error instanceof Error ? error.message : String(error)}`);
+    });
+  }
+  
+  // Deselect all models
+  function deselectAllModels() {
+    filteredModels.forEach(model => {
+      model.enabled = false;
+    });
+    
+    updateSelectedModelIds();
+    renderModels();
+    
+    // Update in database
+    Promise.all(
+      filteredModels.map(model =>
+        fetch('/api/models', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            id: model.id,
+            enabled: false
+          })
+        })
+      )
+    ).catch(error => {
+      showError(`Error updating models: ${error instanceof Error ? error.message : String(error)}`);
+    });
+  }
+  
+  // Select recommended models
+  function selectRecommendedModels() {
+    models.forEach(model => {
+      model.enabled = recommendedModelIds.includes(model.model_id);
+    });
+    
+    updateSelectedModelIds();
+    renderModels();
+    
+    // Update in database
+    Promise.all(
+      models.map(model =>
+        fetch('/api/models', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            id: model.id,
+            enabled: recommendedModelIds.includes(model.model_id)
+          })
+        })
+      )
+    ).catch(error => {
+      showError(`Error updating models: ${error instanceof Error ? error.message : String(error)}`);
+    });
+  }
+
+  // Submit prompt to API
+  async function submitPrompt(promptText: string) {
+    if (selectedModelIds.length === 0) {
+      showError('Please select at least one model');
+      return;
+    }
+    
+    try {
+      // Disable submit button
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = 'Processing...';
+      }
+      
+      // Show loading spinner
+      loadingSpinner?.classList.remove('hidden');
+      
+      // Hide previous results
+      responseGrid?.classList.add('hidden');
+      consensusView?.classList.add('hidden');
+      
+      // Clear previous responses
+      const responseGridContent = responseGrid?.querySelector('.grid');
+      if (responseGridContent) {
+        responseGridContent.innerHTML = '';
+        
+        // Add loading cards for selected models
+        const selectedModels = models.filter(model => model.enabled);
+        
+        selectedModels.forEach(model => {
+          const card = createLoadingCard(model.name, model.provider);
+          responseGridContent.appendChild(card);
+        });
+      }
+      
+      // Send request to API
+      const response = await fetch('/api/prompt', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          text: promptText,
+          modelIds: selectedModelIds
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to process prompt');
+      }
+      
+      // Update response grid
+      if (responseGridContent) {
+        responseGridContent.innerHTML = '';
+        
+        data.responses.forEach((resp: any) => {
+          const card = createResponseCard(
+            resp.model.name, 
+            resp.model.provider, 
+            resp.response_text, 
+            resp.response_time_ms
+          );
+          responseGridContent.appendChild(card);
+        });
+      }
+      
+      // Show consensus view
+      consensusView?.classList.remove('hidden');
+      
+      // Create consensus visualization
+      renderConsensusGroups(data.consensus_groups);
+    } catch (error) {
+      showError(`Error processing prompt: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      // Re-enable submit button
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = 'Submit';
+      }
+      
+      // Hide loading spinner
+      loadingSpinner?.classList.add('hidden');
+      
+      // Show response grid
+      responseGrid?.classList.remove('hidden');
+    }
+  }
+
+  // Render consensus groups
+  function renderConsensusGroups(consensusGroups: any[]) {
+    const consensusLegend = document.getElementById('consensus-legend');
+    const consensusStats = document.getElementById('consensus-stats');
+    const chartCanvas = document.getElementById('consensus-chart') as HTMLCanvasElement;
+    const exportBtn = document.getElementById('export-results');
+    
+    if (!consensusLegend || !consensusStats || !chartCanvas) return;
+    
+    consensusLegend.innerHTML = '';
+    consensusStats.innerHTML = '';
+    
+    if (consensusGroups.length === 0) {
+      consensusLegend.innerHTML = '<p class="text-gray-500">No consensus data available.</p>';
+      consensusStats.innerHTML = '<p class="text-gray-500">No statistics available.</p>';
+      return;
+    }
+    
+    // Calculate statistics
+    const totalModels = consensusGroups.reduce((sum, group) => sum + group.count, 0);
+    const largestGroup = consensusGroups[0];
+    const consensusPercentage = largestGroup.percentage;
+    const uniqueResponses = consensusGroups.length;
+    
+    // Add statistics
+    const statsItems = [
+      {
+        label: 'Total Models',
+        value: totalModels,
+        icon: '<svg class="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>'
+      },
+      {
+        label: 'Consensus Level',
+        value: `${consensusPercentage.toFixed(1)}%`,
+        icon: '<svg class="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>'
+      },
+      {
+        label: 'Unique Responses',
+        value: uniqueResponses,
+        icon: '<svg class="h-5 w-5 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>'
+      },
+      {
+        label: 'Top Response',
+        value: largestGroup.groupName,
+        icon: '<svg class="h-5 w-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg>'
+      }
+    ];
+    
+    statsItems.forEach(item => {
+      const statItem = document.createElement('div');
+      statItem.className = 'bg-white p-3 rounded-lg shadow-sm';
+      
+      statItem.innerHTML = `
+        <div class="flex items-center">
+          ${item.icon}
+          <div class="ml-3">
+            <p class="text-xs text-gray-500">${item.label}</p>
+            <p class="text-lg font-semibold">${item.value}</p>
+          </div>
+        </div>
+      `;
+      
+      consensusStats.appendChild(statItem);
+    });
+    
+    // Render legend
+    consensusGroups.forEach(group => {
+      const consensusGroup = document.createElement('div');
+      consensusGroup.className = 'flex items-center justify-between p-2 rounded hover:bg-gray-100';
+      
+      const leftSection = document.createElement('div');
+      leftSection.className = 'flex items-center';
+      
+      const colorDot = document.createElement('div');
+      colorDot.className = 'w-4 h-4 rounded-full mr-2 flex-shrink-0';
+      colorDot.style.backgroundColor = group.color;
+      
+      const textDiv = document.createElement('div');
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'font-medium text-sm';
+      nameSpan.textContent = group.groupName;
+      
+      const modelsSpan = document.createElement('span');
+      modelsSpan.className = 'text-xs text-gray-500 block mt-0.5';
+      modelsSpan.textContent = group.models.join(', ');
+      
+      textDiv.appendChild(nameSpan);
+      textDiv.appendChild(modelsSpan);
+      
+      leftSection.appendChild(colorDot);
+      leftSection.appendChild(textDiv);
+      
+      const rightSection = document.createElement('div');
+      rightSection.className = 'text-right';
+      
+      const countSpan = document.createElement('span');
+      countSpan.className = 'text-sm font-medium';
+      countSpan.textContent = `${group.count}`;
+      
+      const percentSpan = document.createElement('span');
+      percentSpan.className = 'text-xs text-gray-500 block';
+      percentSpan.textContent = `${group.percentage.toFixed(1)}%`;
+      
+      rightSection.appendChild(countSpan);
+      rightSection.appendChild(percentSpan);
+      
+      consensusGroup.appendChild(leftSection);
+      consensusGroup.appendChild(rightSection);
+      
+      consensusLegend.appendChild(consensusGroup);
+    });
+    
+    // Render chart
+    renderChart(chartCanvas, consensusGroups);
+    
+    // Export functionality
+    exportBtn?.addEventListener('click', () => exportResults(consensusGroups));
+  }
+  
+  // Render chart
+  function renderChart(canvas: HTMLCanvasElement, consensusGroups: any[]) {
+    // Clear any existing chart
+    if (window.consensusChart) {
+      window.consensusChart.destroy();
+    }
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    // Prepare data for chart
+    const labels = consensusGroups.map(group => group.groupName);
+    const data = consensusGroups.map(group => group.count);
+    const colors = consensusGroups.map(group => group.color);
+    
+    // Create chart
+    window.consensusChart = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: data,
+          backgroundColor: colors,
+          borderColor: colors.map(color => color + '80'),
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                const label = context.label || '';
+                const value = context.raw as number;
+                const total = data.reduce((a, b) => a + b, 0);
+                const percentage = Math.round((value / total) * 100);
+                return `${label}: ${value} (${percentage}%)`;
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+  
+  // Export results
+  function exportResults(consensusGroups: any[]) {
+    // Create CSV content
+    let csv = 'Response,Count,Percentage,Models\n';
+    
+    consensusGroups.forEach(group => {
+      const response = `"${group.groupName.replace(/"/g, '""')}"`;
+      const count = group.count;
+      const percentage = group.percentage.toFixed(1);
+      const models = `"${group.models.join(', ').replace(/"/g, '""')}"`;
+      
+      csv += `${response},${count},${percentage},${models}\n`;
+    });
+    
+    // Create download link
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `llm-consensus-results-${new Date().toISOString().slice(0, 10)}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  // Event listeners
+  syncModelsBtn?.addEventListener('click', syncModels);
+  
+  // Search and filter event listeners
+  modelSearchInput?.addEventListener('input', (e) => {
+    searchTerm = (e.target as HTMLInputElement).value;
+    filterAndSortModels();
+    renderModels();
+  });
+  
+  providerFilterSelect?.addEventListener('change', (e) => {
+    providerFilter = (e.target as HTMLSelectElement).value;
+    filterAndSortModels();
+    renderModels();
+  });
+  
+  sortModelsSelect?.addEventListener('change', (e) => {
+    sortBy = (e.target as HTMLSelectElement).value;
+    filterAndSortModels();
+    renderModels();
+  });
+  
+  // Bulk action event listeners
+  selectAllBtn?.addEventListener('click', selectAllModels);
+  deselectAllBtn?.addEventListener('click', deselectAllModels);
+  selectRecommendedBtn?.addEventListener('click', selectRecommendedModels);
+  
+  promptForm?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    
+    const prompt = promptInput?.value;
+    if (!prompt) return;
+    
+    submitPrompt(prompt);
+  });
+
+  // Helper functions
+  function createLoadingCard(modelName: string, provider: string): HTMLDivElement {
+    const card = document.createElement('div');
+    card.className = 'rounded-lg overflow-hidden shadow-sm transition-all duration-300 h-full border-l-4 border-gray-200 bg-white';
+    
+    card.innerHTML = `
+      <div class="p-4">
+        <div class="flex justify-between items-start mb-3">
+          <div>
+            <h3 class="font-semibold text-gray-900">${modelName}</h3>
+            <p class="text-sm text-gray-500">${provider}</p>
+          </div>
+        </div>
+        
+        <div class="min-h-16 flex items-center justify-center p-4 mb-3 bg-white rounded border border-gray-100">
+          <div class="animate-pulse flex space-x-2 justify-center items-center">
+            <div class="w-2 h-2 bg-gray-300 rounded-full"></div>
+            <div class="w-2 h-2 bg-gray-300 rounded-full"></div>
+            <div class="w-2 h-2 bg-gray-300 rounded-full"></div>
+          </div>
+        </div>
+        
+        <div class="text-sm text-gray-500 text-right">
+          <span>Loading...</span>
+        </div>
+      </div>
+    `;
+    
+    return card;
+  }
+
+  function createResponseCard(modelName: string, provider: string, response: string, time: number): HTMLDivElement {
+    const card = document.createElement('div');
+    card.className = 'rounded-lg overflow-hidden shadow-sm transition-all duration-300 h-full';
+    card.style.borderLeft = '4px solid #3B82F6';
+    card.style.backgroundColor = '#3B82F610';
+    
+    card.innerHTML = `
+      <div class="p-4">
+        <div class="flex justify-between items-start mb-3">
+          <div>
+            <h3 class="font-semibold text-gray-900">${modelName}</h3>
+            <p class="text-sm text-gray-500">${provider}</p>
+          </div>
+        </div>
+        
+        <div class="min-h-16 flex items-center justify-center p-4 mb-3 bg-white rounded border border-gray-100">
+          <p class="text-xl font-medium text-center break-words">
+            "${response}"
+          </p>
+        </div>
+        
+        <div class="text-sm text-gray-500 text-right">
+          <span>Response time: ${time}ms</span>
+        </div>
+      </div>
+    `;
+    
+    return card;
+  }
+
+  // Initialize
+  window.addEventListener('load', fetchModels);
+</script>
